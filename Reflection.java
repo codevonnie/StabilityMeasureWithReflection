@@ -6,14 +6,15 @@ import java.lang.reflect.*;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 
 public class Reflection {
    private static Class<?> c;
    private static Map<Class<?>, List<Class<?>>> efferent = new HashMap<Class<?>, List<Class<?>>>();
+   private static Map<Class<?>, List<Class<?>>> afferent = new HashMap<Class<?>, List<Class<?>>>();
    private static Map<Class<?>, List<Class<?>>> graph = new HashMap<Class<?>, List<Class<?>>>();
+   private static Map<Class<?>, Float> stabilityMap = new HashMap<Class<?>, Float>();
    private static List<Class<?>> myList;
    private static List<Class<?>> aList = new ArrayList<Class<?>>();
    
@@ -46,6 +47,8 @@ public class Reflection {
 		child.close(); //close URLClassLoader
 		
 		getDependencies();
+		calculateStability();
+		//printStability();
    }
 
    public Reflection(Class<?> c){
@@ -55,14 +58,13 @@ public class Reflection {
       //printConstructors();
       //printFields();
       //printMethods();
-      //isInterface();
       //createArray();
       addToList(); //method to add classes to hashmap
    }
    
    public void addToList()
    {
-	   myList = new ArrayList();
+	   myList = new ArrayList<Class<?>>();
 	   graph.put(c, myList); //add classes as key to hashmap
 	   aList.add(c);
 	   //System.out.println(graph.containsKey(c.getClass()));
@@ -72,21 +74,18 @@ public class Reflection {
    public static void getDependencies()
    {
 	   
-	   //boolean iFace = isInterface();
 	   System.out.println(graph.size());
 	   
 	   for (Map.Entry<Class<?>, List<Class<?>>> entry : graph.entrySet())
 	   {
-		   myList = new ArrayList();
+		   myList = new ArrayList<Class<?>>();
 		   c=entry.getKey();
 		   for(int i=0; i<aList.size(); i++)
 		   {
-			   if(entry.getKey().isAssignableFrom(aList.get(i))&&aList.get(i)!=entry.getKey())
+			   if((aList.get(i).isAssignableFrom(c))&&(aList.get(i)!=c))
 			   {
-				   
 				   myList.add(aList.get(i));
-				   
-				   //System.out.println(entry.getKey() + " is assignable from: " + " " + aList.get(i));
+
 			   }
 		   }
 		   checkConstructor();
@@ -95,15 +94,74 @@ public class Reflection {
 		   efferent.put(c, myList);
 		   //System.out.println(entry.getKey() + "/" + entry.getValue());
 	   }
-	   efferent.forEach( (k,v) -> System.out.println("Key: " + k + ": Value: " + v));
 	   
-	   //System.out.println(c.getInterfaces().toString());
+	   fillAfferentList();
+	   //efferent.forEach( (k,v) -> System.out.println("Key: " + k + ": Value: " + v));
+	   //afferent.forEach( (k,v) -> System.out.println("Key: " + k + ": Value: " + v));
+	   
+
    }
    
-   public static boolean isInterface(){
+   private static void calculateStability()
+   {
+	   float aff = 0;
+	   float eff = 0;
+	   float stability = 0;
+	   Class<?> temp;
+	  
+	   System.out.println("efferent");
+	  efferent.forEach( (k,v) -> System.out.println("Key: " + k + ": Value: " + v));
+	  System.out.println("afferent");
+	  afferent.forEach( (k,v) -> System.out.println("Key: " + k + ": Value: " + v));
 	   
-	   boolean imAnIface = c.isInterface();
-	   return imAnIface;
+	   for (Map.Entry<Class<?>, List<Class<?>>> entry : efferent.entrySet())
+	   {
+		   myList = new ArrayList<Class<?>>();
+		   temp=entry.getKey();
+		   eff=entry.getValue().size();
+		   
+		   if(afferent.containsKey(temp))
+		   {
+			   myList.addAll(entry.getValue());
+		   }
+		   
+		   aff=afferent.get(temp).size();
+		   
+		   if(eff==0)
+			   stability=0;
+		   else
+		   {
+			   stability=(eff /(eff+aff));
+		   }
+			   
+
+		   stabilityMap.put(temp, stability);
+
+	   }
+	   
+	   stabilityMap.forEach( (k,v) -> System.out.println(k + " " + v));
+
+   }
+   
+   
+   
+   private static void fillAfferentList()
+   {
+	   for(int i =0; i<aList.size(); i++) {
+		
+			myList=new ArrayList<Class<?>>();
+			
+			for (Map.Entry<Class<?>, List<Class<?>>> entry : efferent.entrySet())
+		   {
+				if(entry.getValue().contains(aList.get(i)))
+				{
+					myList.add(entry.getKey());
+				}
+		   }
+			
+			afferent.put(aList.get(i), myList);
+			
+		}
    }
 
    private static void checkConstructor()
@@ -116,25 +174,17 @@ public class Reflection {
          Class<?> pvec[] = ct.getParameterTypes();
          for (int j = 0; j < pvec.length; j++){
         	 
-        	 //System.out.println(pvec[j]);
-        	 if(!pvec[j].toString().startsWith("class java.")&&!pvec[j].isPrimitive())
+        	 if((!pvec[j].toString().startsWith("class java."))&&(!pvec[j].isPrimitive())&&(!pvec[j].isArray()))
         	 {
         		 if(!myList.contains(pvec[j]))
         		 {
         			 myList.add(pvec[j]);
         		 }
-        		 
-        		 //System.out.println(pvec[j]);
-        		 
+       		 
         	 }
          }
-         /*
-         Class<?> evec[] = ct.getExceptionTypes();
-         for (int j = 0; j < evec.length; j++){
-            System.out.println("\texc #" + j + " " + evec[j]);
-         }*/
-         //System.out.println("\t-----");
       }
+	   
    }
    
    private static void checkFields()
@@ -142,21 +192,15 @@ public class Reflection {
 	   Field fieldlist[] = c.getDeclaredFields();
 	      for (int i = 0; i < fieldlist.length; i++) {
 	         Field fld = fieldlist[i];
-	         if(!fld.getType().toString().startsWith("class java.")&&!fld.getType().isPrimitive())
+	         if((!fld.getType().toString().startsWith("class java."))&&(!fld.getType().isPrimitive())&&(!fld.getType().isArray()))
         	 {
 	        	 if(!myList.contains(fld.getType()))
         		 {
 	        		 myList.add(fld.getType());
         		 }
-	        	 
-		         /*System.out.println("\tname = " + fld.getName());
-		         System.out.println("\tdecl class = " + fld.getDeclaringClass());
-		         System.out.println("\ttype = " + fld.getType());
-		         int mod = fld.getModifiers();
-		         System.out.println("\tmodifiers = " + Modifier.toString(mod));
-		         System.out.println("-----");*/
         	 }
 	      }
+	    
    }
    
    private static void checkMethods()
@@ -165,85 +209,35 @@ public class Reflection {
 
       for (int i = 0; i < methlist.length;i++) {
 	      	Method m = methlist[i];
-
+	      	Class<?> pvec[] = m.getParameterTypes();
 	      	for (int j = 0; j < methlist.length; j++)
 	      	{
-	      		if(!m.getReturnType().toString().contentEquals("void"))
+	      		for (int l = 0; l < pvec.length; l++){
+	      			if((!pvec[l].toString().startsWith("class java."))&&(!pvec[l].isPrimitive())&&(!pvec[l].isArray()))
+	      			{
+	      				if(!myList.contains(pvec[l]))
+		        		 {
+			        		 myList.add(pvec[l]);
+		        		 }
+	      			}
+	      			
+	      		}
+	      		//System.out.println("m.getReturnType: " + m.getReturnType());
+	      		if((!m.getReturnType().toString().contentEquals("void"))&&(!m.getReturnType().isArray()))
   				{
-	      			if(!myList.contains(m.getReturnType()))
-	        		 {
-		        		 myList.add(m.getReturnType());
-	        		 }
+	      			if((!m.getReturnType().toString().startsWith("class java."))&&(!m.getReturnType().isPrimitive()))
+  					{
+	      				if(!myList.contains(m.getReturnType()))
+		        		 {
+			        		 myList.add(m.getReturnType());
+		        		 }
+  					}
+	      			//
+	      			
   				}
 	    	}
-	      
-	      	
 	      }
+     
    }
-   
-   public void printConstructors(){
-      Constructor<?> ctorlist[] = c.getDeclaredConstructors();
-      System.out.println("--------------" + ctorlist.length + " Constructors --------------");
-      for (int i = 0; i < ctorlist.length; i++) {
-         Constructor<?> ct = ctorlist[i];
-         System.out.println("\tname  = " + ct.getName());
-         System.out.println("\tdecl class = " + ct.getDeclaringClass());
-
-         Class<?> pvec[] = ct.getParameterTypes();
-         for (int j = 0; j < pvec.length; j++){
-            System.out.println("\tparam #" + j + " " + pvec[j]);
-         }
-
-         Class<?> evec[] = ct.getExceptionTypes();
-         for (int j = 0; j < evec.length; j++){
-            System.out.println("\texc #" + j + " " + evec[j]);
-         }
-         System.out.println("\t-----");
-      }
-   }
-
-   public void printFields(){
-      Field fieldlist[] = c.getDeclaredFields();
-      for (int i = 0; i < fieldlist.length; i++) {
-         Field fld = fieldlist[i];
-         System.out.println("\tname = " + fld.getName());
-         System.out.println("\tdecl class = " + fld.getDeclaringClass());
-         System.out.println("\ttype = " + fld.getType());
-         int mod = fld.getModifiers();
-         System.out.println("\tmodifiers = " + Modifier.toString(mod));
-         System.out.println("-----");
-      }
-   }
-
-   public void printMethods(){
-      Method methlist[] = c.getDeclaredMethods();
-      System.out.println("--------------" + methlist.length + " Methods --------------");
-      for (int i = 0; i < methlist.length;i++) {
-      	Method m = methlist[i];
-      	System.out.println("\tname = " + m.getName());
-      	System.out.println("\tdecl class = " + m.getDeclaringClass());
-      	Class<?> pvec[] = m.getParameterTypes();
-      	for (int j = 0; j < pvec.length; j++){
-         		System.out.println("\tparam #" + j + " " + pvec[j]);
-    	}
-      	Class<?> evec[] = m.getExceptionTypes();
-      	for (int j = 0; j < evec.length; j++){
-         		System.out.println("\texc #" + j + " " + evec[j]);
-      	}
-      	System.out.println("\treturn type = " + m.getReturnType());
-      	System.out.println("\t-----");
-      }
-   }
-
-   public void createArray(){
-      try {
-         Class<?> cls = Class.forName("java.lang.String");
-         Object arr = Array.newInstance(cls, 10);
-         Array.set(arr, 5, "Msc OO");
-         String s = (String)Array.get(arr, 5);
-         System.out.println(s);
-      }catch (Throwable e) {
-         System.err.println(e);
-      }
-   }
+  
 }
