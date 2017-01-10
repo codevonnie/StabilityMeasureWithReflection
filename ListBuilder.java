@@ -1,5 +1,5 @@
 /**
- * 
+ * Class to construct map based on each class read in from Jar
  */
 
 package ie.gmit.sw;
@@ -27,15 +27,12 @@ public class ListBuilder
 		this.c=c;
 		this.graph=graph;
 	}
-
+	//method to build graph map with Class names
 	public void buildList()
 	{
 		myList = new ArrayList<Class<?>>();
 		graph.put(c, myList); //add classes as key to hashmap
 		aList.add(c);
 		System.out.println(c);
-		
-		
 	}
-
 }

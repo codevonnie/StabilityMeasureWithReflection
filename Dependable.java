@@ -1,5 +1,5 @@
 /**
- * 
+ * Interface with methods for checking dependencies on classes in Jar files
  */
 
 package ie.gmit.sw;

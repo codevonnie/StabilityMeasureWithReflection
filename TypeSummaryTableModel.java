@@ -1,5 +1,5 @@
 /**
- * 
+ *  Class which constructs and fills Table for GUI
  */
 
 package ie.gmit.sw;
@@ -13,71 +13,63 @@ import javax.swing.table.*;
 public class TypeSummaryTableModel extends AbstractTableModel{
 	private static final long serialVersionUID = 777L;
 	private String[] cols = {"Class", "Efferent", "Afferent", "Stability"};
-	private Object[][] data = {
-		{"Stuff 1", "Other Stuff 1", "Even More Stuff 1", " "},
-		{"Stuff 2", "Other Stuff 2", "Even More Stuff 2", " "},
-		{"Stuff 3", "Other Stuff 3", "Even More Stuff 3", " "},
-		{"Stuff 4", "Other Stuff 4", "Even More Stuff 4", " "},
-		{"Stuff 5", "Other Stuff 5", "Even More Stuff 5", " "},
-		{"Stuff 6", "Other Stuff 6", "Even More Stuff 6", " "},
-		{"Stuff 5", "Other Stuff 5", "Even More Stuff 5", " "},
-		{"Stuff 6", "Other Stuff 6", "Even More Stuff 6", " "},
-		{"Stuff 5", "Other Stuff 5", "Even More Stuff 5", " "},
-		{"Stuff 6", "Other Stuff 6", "Even More Stuff 6", " "},
-		{"Stuff 7", "Other Stuff 7", "Even More Stuff 7", " "}
-	};
-	private static Map<Class<?>, List<Class<?>>> efferent = new HashMap<Class<?>, List<Class<?>>>();
-	private static Map<Class<?>, List<Class<?>>> afferent = new HashMap<Class<?>, List<Class<?>>>();
+	private Object[][] data;
+	private static Map<Class<?>, List<String>> effString = new HashMap<Class<?>, List<String>>();
+    private static Map<Class<?>, List<String>> affString = new HashMap<Class<?>, List<String>>();
 	private static Map<Class<?>, Float> stabilityMap = new HashMap<Class<?>, Float>();
-	private static List<Class<?>> classList = new ArrayList<Class<?>>();
+	private static List<Class<?>> classList;
 	
-	public TypeSummaryTableModel(Map<Class<?>, List<Class<?>>> efferent, Map<Class<?>, List<Class<?>>> afferent, Map<Class<?>, Float> stabilityMap)
+	public TypeSummaryTableModel(Map<Class<?>, List<String>> effString, Map<Class<?>, List<String>> affString, Map<Class<?>, Float> stabilityMap)
 	{
-		this.efferent=efferent;
-		this.afferent=afferent;
+		this.effString=effString;
+		this.affString=affString;
 		this.stabilityMap=stabilityMap;
 		fillTable();
 	}
-
-
-
+	//method to fill the table values
 	public void fillTable()
 	{
-		
-		afferent.forEach( (k,v) -> classList.add(k));
-		int j;
-				
-		for(int i=0; i<cols.length; i++)
+		classList= new ArrayList<Class<?>>();
+		//classList takes the names of each class
+		affString.forEach( (k,v) -> classList.add(k));
+		int rows;
+		//2D Object array which takes the value of classLists for the row length and the length of the column array for the columns
+		Object[][] arr = new Object[classList.size()][cols.length];
+		//data array is initialised with the arr array
+		data=arr;
+
+		//loop through each column and fill
+		for(int col=0; col<cols.length; col++)
 		{
-			j=0;
+			//row is reset to zero after each column is filled
+			rows=0;
+			//loop through each class entry in classList
 			for (Class c : classList)
 			{
-				switch(i){
+				//switch takes what column is being filled and uses the appropriate list or map
+				switch(col){
+					//first column, class names are taken from classList entry
 					case 0 :
-						data[j][i]=c;
-						System.out.println("j: "+j+" i: "+i+ " "+ data[j][i]);
-					    break; // optional
-					   
+						data[rows][col]=c.getSimpleName();
+					    break; 
+						//second column, class names are gotten from efferent map classlist using the current class as the key
 					   case 1 :
-						  data[j][i]=efferent.get(c);
-						  System.out.println("j: "+j+" i: "+i+ " "+ data[j][i]);
-					      break; // optional
-					      
+						       data[rows][col]=effString.get(c);
+					      break; 
+					    //third column, class names are gotten from afferent map class list using the current class as the key
 					   case 2 :
-						   data[j][i]=afferent.get(c);
-						   System.out.println("j: "+j+" i: "+i+ " "+ data[j][i]);
-						      break; // optional
-						      
+						   data[rows][col]=affString.get(c);
+						      break; 
+					   //fourth column, stability values are gotten from stability map using the current class as the key    
 					   case 3 :
-						   data[j][i]=stabilityMap.get(c).toString();
-						   System.out.println("j: "+j+" i: "+i+ " "+ data[j][i]);
-						      break; // optional
-					   
-					   // You can have any number of case statements.
-					   default : // Optional
-					      // Statements
+						   data[rows][col]=stabilityMap.get(c).toString();
+						      break; 
+
+					   default : 
+
 					}
-				j++;	
+				//row is incremented after each loop
+				rows++;	
 			}
 		}
 	}

@@ -1,5 +1,5 @@
 /**
- * 
+ * Class that uses a JarInputStream to read in a Jar and uses ClassLoader to get each class in Jar
  */
 
 package ie.gmit.sw;
@@ -25,24 +25,27 @@ public class JarReader
 	{
 		this.graph=graph;
 	}
-	
+	//method takes in filePath gotten from GUI
 	public void readJar(String filePath)
 	{
 		System.out.println(filePath);
+		//creates instance of ListBuilder class
 		ListBuilder ls = new ListBuilder();
+		//changes all backslashes to forward slashes in filepath
 		String path=filePath.replace(File.separator, "/");
 		JarInputStream in =	null;
 		JarEntry next;
-		//URL[] urls;
 		URLClassLoader child = 	null;
 		
 		try
 		{
 			in = new JarInputStream(new FileInputStream(new File(path)));
+			//add !/ to filepath for urls array
 			path = path.concat("!/");
 			URL[] urls = { new URL("jar:file:" + path) };
 			child = new URLClassLoader (urls, in.getClass().getClassLoader());
 			next = in.getNextJarEntry();
+			//loops through all entries in Jar 
 			while(next!=null)
 			{
 				if(next.getName().endsWith(".class"))
@@ -53,7 +56,8 @@ public class JarReader
 						name.substring(0, name.length() - ".class".length());
 			        try {
 			            Class<?> queryClass = child.loadClass(name);//make class instance of jar class
-			            ls = new ListBuilder(queryClass, graph);//call Reflection constructor and pass jar class
+			            ls = new ListBuilder(queryClass, graph);//call ListBuilder constructor and pass jar class and map
+			            //call buildList method to add to graph map
 			            ls.buildList();
 			        } catch (ClassNotFoundException ee) {
 			            System.out.println("Couldn't find class '"+ name + "'");
